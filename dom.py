@@ -95,11 +95,9 @@ from subprocess import call
 #   See 'show management api http-commands' on your switch.
 #
 PROTOCOL = 'https'
-USERNAME = 'eapi'
+USERNAME = 'eapiuser'
 PASSWORD = 'admin'
-#HOSTNAME = '10.68.49.142'
-#HOSTNAME = '10.68.49.140'
-HOSTNAME = '10.81.108.137'
+HOSTNAME = 'localhost'
 PORT = 443
 
 #
@@ -491,8 +489,7 @@ def get_interfaces(switch):
 
     # Filter out non-Ethernet interfaces
     for interface in response[0][u'interfaceStatuses'].keys():
-        #if str(interface)[:8] != 'Ethernet':
-        if str(interface) != 'Ethernet2':
+        if str(interface)[:8] != 'Ethernet':
             response[0][u'interfaceStatuses'].pop(interface, None)
 
     return response[0][u'interfaceStatuses']
