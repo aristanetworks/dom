@@ -1,0 +1,10 @@
+mock
+unittest
+coveralls
+pep8
+pyflakes
+coverage
+flake8
+flake8-print
+flake8-debugger
+pep8-naming
