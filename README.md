@@ -67,7 +67,7 @@ SNMP configuration may be tested by using the hidden --test option which will
 send 1 sample trap/inform to the traphost.
 
 ```
-./dom.py --test snmp
+./dom.py --test trap
 ```
 
 # Usage
