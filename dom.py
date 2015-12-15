@@ -83,6 +83,7 @@ import ssl
 from ctypes import cdll, byref, create_string_buffer
 from pprint import pprint, pformat
 from jsonrpclib import Server
+from jsonrpclib import ProtocolError
 from subprocess import call
 
 #############################################################################
@@ -438,10 +439,55 @@ def get_interfaces(switch):
     """
 
     log("Entering {0}.".format(sys._getframe().f_code.co_name), level='DEBUG')
-    response = switch.runCmds(1, ["show interfaces status"])
-    # Unable to connect raises
-    #    raise err
-    #    error: [Errno 60] Operation timed out
+    conn_error = False
+    commands = ["show interfaces status"]
+
+    try:
+        response = switch.runCmds(1, commands)
+    except ProtocolError, err:
+        (errno, msg) = err[0]
+        # 1002: invalid command
+        if errno == 1002:
+            log("Invalid EOS interface name ({0})".format(commands), error=True)
+        else:
+            conn_error = True
+            log("ProtocolError while retrieving {0} ([{1}] {2})".
+                format(commands, errno, msg),
+                error=True)
+    except Exception, err:
+        conn_error = True
+        #   60: Operation timed out
+        #   61: Connection refused (http vs https?)
+        #  401: Unauthorized
+        #  405: Method Not Allowed (bad URL)
+        if hasattr(err, 'errno'):
+            if err.errno == 60:
+                log("Connection timed out: Incorrect hostname/IP or eAPI"
+                    " not configured on the switch.", error=True)
+            elif err.errno == 61:
+                log("Connection refused: http instead of https selected or"
+                    " eAPI not configured on the switch.", error=True)
+            else:
+                log("General Error retrieving {0} ({1})".format(commands,
+                                                                err),
+                    error=True)
+        else:
+            # Parse the string manually
+            msg = str(err)
+            msg = msg.strip('<>')
+            err = msg.split(': ')[-1]
+
+            if "401 Unauthorized" in err:
+                log("ERROR: Bad username or password")
+            elif "405 Method" in err:
+                log("ERROR: Incorrect URL")
+            else:
+                log("HTTP Error retrieving {0} ({1})".format(commands,
+                                                             err),
+                    error=True)
+
+    if conn_error:
+        raise EapiException("Connection error with eAPI")
 
     # Filter out non-Ethernet interfaces
     for interface in response[0][u'interfaceStatuses'].keys():
