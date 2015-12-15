@@ -74,22 +74,21 @@ class TestDom(unittest.TestCase):
         """
         out = StringIO()
 
-        snmp_settings = {'traphost': 'localhost',
-                         'version': '3',
-                         'secname': 'eosplus',
-                         'seclevel': 'authPriv',
-                         'authprotocol': 'MD5',
-                         'authpassword': 'eosplus123',
-                         'privprotocol': 'DES',
-                         'privpassword': 'eosplus123'
-                        }
+        #snmp_settings = {'traphost': 'localhost',
+        #                 'version': '3',
+        #                 'secname': 'eosplus',
+        #                 'seclevel': 'authPriv',
+        #                 'authprotocol': 'MD5',
+        #                 'authpassword': 'eosplus123',
+        #                 'privprotocol': 'DES',
+        #                 'privpassword': 'eosplus123'
+        #                }
 
         message = "Test message"
         notify(message, out=out)
-        #options = {}
 
         output = out.getvalue().strip()
-        print "DEBUG: {0}".format(output)
+        #print "DEBUG: {0}".format(output)
         assert output.startswith(message)
         #mock_send_trap.assert_called_with(message)
         mock_send_trap.assert_called()
@@ -123,10 +122,10 @@ class TestDom(unittest.TestCase):
 
         interfaces = dict(self.interfaces)
         dominfo = dict(self.dominfo)
-        check_interfaces(str(interface),
+        check_interfaces(0, str(interface),
                          interfaces[interface],
                          dominfo[interface])
-        pprint(vars(status[interface]))
+        #pprint(vars(status[interface]))
         assert status[interface].link_up_on_prev_poll_ == False
         assert status[interface].link_up_now == False
 
@@ -143,11 +142,10 @@ class TestDom(unittest.TestCase):
         interfaces = dict(self.interfaces)
         interfaces[interface][u'linkStatus'] = u'connected'
         dominfo = dict(self.dominfo)
-        check_interfaces(str(interface), interfaces[interface],
+        check_interfaces(0, str(interface), interfaces[interface],
                              dominfo[interface])
-        from pprint import pprint
-        pprint(vars(status[interface]))
-        assert status[interface].link_up_on_prev_poll_ == True
+        #pprint(vars(status[interface]))
+        assert status[interface].link_up_on_prev_poll_ == False
         assert status[interface].link_up_now == False
 
     @unittest.skip("skipping")
@@ -164,7 +162,6 @@ class TestDom(unittest.TestCase):
         interfaces[interface][u'linkStatus'] = u'connected'
         dominfo = dict(self.dominfo)
         status[interface].check_dom_info(dominfo)
-        from pprint import pprint
         pprint(vars(status[interface]))
 
     @mock.patch('dom.notify')
@@ -176,9 +173,6 @@ class TestDom(unittest.TestCase):
 
         #global status
         status = {}
-
-        global DEBUG
-        DEBUG = True
 
         interfaces = dict(self.interfaces)
         interfaces[interface][u'linkStatus'] = u'connected'
@@ -207,9 +201,6 @@ class TestDom(unittest.TestCase):
         #global status
         status = {}
 
-        global DEBUG
-        DEBUG = True
-
         interfaces = dict(self.interfaces)
         interfaces[interface][u'linkStatus'] = u'connected'
         dominfo = dict(self.dominfo)
@@ -236,9 +227,6 @@ class TestDom(unittest.TestCase):
 
         #global status
         status = {}
-
-        global DEBUG
-        DEBUG = True
 
         interfaces = dict(self.interfaces)
         interfaces[interface][u'linkStatus'] = u'connected'

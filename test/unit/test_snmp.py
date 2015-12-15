@@ -36,12 +36,12 @@ class TestSnmp(unittest.TestCase):
 
         msg = "This is a test message"
 
-        send_trap(snmp_settings, msg, uptime='', test=True)
+        send_trap(snmp_settings, msg, uptime=0, test=True)
         mock_call.assert_called_with(['snmptrap',
                                       '-v', snmp_settings['version'],
                                       '-c', snmp_settings['community'],
                                       snmp_settings['traphost'],
-                                      "''",
+                                      '0',
                                       '.1.3.6.1.4.1.30065',
                                       '.1.3.6.1.4.1.30065.6',
                                       's',
@@ -63,7 +63,7 @@ class TestSnmp(unittest.TestCase):
 
         msg = "This is a test message"
 
-        send_trap(snmp_settings, msg, uptime='', test=True)
+        send_trap(snmp_settings, msg, uptime=0, test=True)
         mock_call.assert_called_with(['snmptrap',
                                       '-v', snmp_settings['version'],
                                       '-Ci',
@@ -74,7 +74,7 @@ class TestSnmp(unittest.TestCase):
                                       '-x', snmp_settings['privprotocol'],
                                       '-X', snmp_settings['privpassword'],
                                       snmp_settings['traphost'],
-                                      "''",
+                                      '0',
                                       '.1.3.6.1.4.1.30065',
                                       '.1.3.6.1.4.1.30065.6',
                                       's',
