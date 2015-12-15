@@ -85,6 +85,9 @@ from pprint import pprint, pformat
 from jsonrpclib import Server
 from subprocess import call
 
+#############################################################################
+# BEGIN CONFIGURATION
+#
 #
 # eAPI connection information:
 #   This must be configured to match the switch being monitored.
@@ -120,6 +123,10 @@ SNMP_SETTINGS = {'traphost': 'localhost',
 #                 'community': 'eosplus',
 #                 'version': '2c',
 #                }
+
+#
+# END CONFIGURATION
+#############################################################################
 
 # System defaults managed by CLI options:
 DEBUG = False   #pylint: disable=C0103
@@ -283,7 +290,7 @@ def log(msg, level='INFO', error=False):
     priority = ''.join(["syslog.LOG_", level])
     syslog.syslog(eval(priority), msg)
 
-def notify(msg, level='INFO', error=False, out=sys.stdout):
+def notify(msg, level='INFO', error=False, uptime=0, out=sys.stdout):
     """Manage notifications
     args:
         msg (str): The message to log.
@@ -295,12 +302,12 @@ def notify(msg, level='INFO', error=False, out=sys.stdout):
         log(msg, level, error)
 
     if SNMP:
-        send_trap(SNMP_SETTINGS, msg, uptime='', test=False)
+        send_trap(SNMP_SETTINGS, msg, uptime=uptime, test=False)
 
     if out != sys.stdout:
         out.write(msg)
 
-def send_trap(snmp_settings, message, uptime='', test=False):
+def send_trap(snmp_settings, message, uptime=0, test=False):
     """Send an Arista enterprise-specific SNMP trap containing message.
 
     Args:
@@ -378,13 +385,16 @@ def send_trap(snmp_settings, message, uptime='', test=False):
     generic_trapnum = '6'
     trap_oid = '.'.join([enterprise_oid, generic_trapnum])
 
-    trap_args.append("'"+str(uptime)+"'")
+    trap_args.append(str(uptime))
     trap_args.append(enterprise_oid)
     trap_args.append(trap_oid)
     trap_args.append('s')
 
     if test == "trap":
-        message = "Test trap from the Digital Optical Monitor."
+        message = "TRANSCEIVER_RX_POWER_CHANGE, Ethernet2 (XKE000000000) RX "\
+                  "power level has changed by -2.6348 dBm from baseline "\
+                  "-5.4035 dBm (2015-12-15 11:33:11)  to -8.0382 dBm "\
+                  "(2015-12-15 11:33:33)"
         log("Sending SNMPTRAP to {0} with arguments: {1}".
             format(snmp_settings['traphost'], trap_args), level='DEBUG')
 
@@ -441,7 +451,7 @@ def get_interfaces(switch):
 
     return response[0][u'interfaceStatuses']
 
-def check_interfaces(interface, interfaceinfo, dominfo):
+def check_interfaces(uptime, interface, interfaceinfo, dominfo):
     '''Check the DOM info for each interface on a given switch.
     '''
 
@@ -455,6 +465,7 @@ def check_interfaces(interface, interfaceinfo, dominfo):
     except (KeyError, NameError):
         STATUS[interface] = XcvrStatusReactor(interface)
 
+    STATUS[interface].uptime = uptime
     STATUS[interface].link_up_now = link_up(interfaceinfo)
     STATUS[interface].check_dom_info(dominfo)
 
@@ -480,6 +491,7 @@ class XcvrStatusReactor(object):
         self.base_power_['rx'] = {}
         self.base_power_['tx'] = {}
         self.base_timestamp_ = None
+        self.uptime = 0
 
         self.link_up_now = False
         self.link_up_on_prev_poll_ = False
@@ -612,6 +624,7 @@ class XcvrStatusReactor(object):
                                round(rx_power, 4),
                                _time_string()),
                        level='WARNING',
+                       uptime=self.uptime,
                        out=out)
                 #if DEBUG:
                 #if out != sys.stdout:
@@ -638,6 +651,7 @@ class XcvrStatusReactor(object):
                                round(tx_power, 4),
                                _time_string()),
                        level='WARNING',
+                       uptime=self.uptime,
                        out=out)
                 #if DEBUG:
                 #out.write("Tx change")
@@ -666,13 +680,7 @@ def main(args):
     '''Do Stuff.
     '''
 
-    #global EMAIL_ACTIVE
-
     log("Entering {0}.".format(sys._getframe().f_code.co_name), level='DEBUG')
-
-    #op.add_option( '-e', '--email', dest='email', action='store_true',
-    #               help='sends email alerts' )
-    #email_active = opts.email
 
     log("Started up successfully. Entering main loop...")
 
@@ -682,11 +690,13 @@ def main(args):
     while True:
         interfaces = get_interfaces(switch)
         response = switch.runCmds(1, ["show interfaces {0} transceiver"
-                                      .format(', '.join(interfaces.keys()))])
+                                      .format(', '.join(interfaces.keys())),
+                                      "show version"])
         dominfo = response[0][u'interfaces']
+        uptime = int(response[1][u'bootupTimestamp'])
 
         for interface in interfaces.keys():
-            check_interfaces(str(interface), interfaces[interface],
+            check_interfaces(uptime, str(interface), interfaces[interface],
                              dominfo[interface])
 
         log("---sleeping for {0} seconds.".format(args.poll_interval),
@@ -714,7 +724,7 @@ if __name__ == '__main__':
         sys.exit(0)
 
     elif ARGS.test == 'trap':
-        send_trap(SNMP_SETTINGS, '', test='trap')
+        send_trap(SNMP_SETTINGS, '', uptime='1449684931', test='trap')
         sys.exit(0)
 
     try:
