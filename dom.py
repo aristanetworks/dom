@@ -63,8 +63,8 @@
         Arista# bash sudo /mnt/flash/dom.py -p 30 -t 2 --snmp
 
         Start automatically with:
-        Arista(config)#daemon rphm
-        Arista(config-daemon-rphm)#command /usr/bin/rphm --test=snmp
+        Arista(config)#daemon dom
+        Arista(config-daemon-dom)#command /mnt/flash/dom.py --tolerance 2 --poll-interval 30
         Arista(config)#end
 
    COMPATABILITY
