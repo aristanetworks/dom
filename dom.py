@@ -31,6 +31,8 @@
 ##############################################################################
 # Proactive / Predictive DOM monitoring
 #
+# Version 3.1 2016-01-27 Jere Julian <jere@arista.com>
+#   - Fix issue to skip over interfaces without optical data avail.
 # Version 3.0 2015-12-04 Jere Julian <jere@arista.com>
 #   Based on 'domm' originally by Mark Berly, Sean Flack, & Andrei Dvornic
 #
@@ -601,11 +603,15 @@ class XcvrStatusReactor(object):
         self.base_timestamp_ = _time_string()
 
         if not self.response:
-            # No optical data for this interface
+            # No data for this interface
             return
 
         tx_power = self.response.get(u'txPower', None)
         rx_power = self.response.get(u'rxPower', None)
+
+        if tx_power is None and rx_power is None:
+            # No optical data for this interface
+            return
 
         # If an interface is shut then it will report a DOM value of
         # '-inf'. In this case, do not record DOM info.
@@ -637,20 +643,22 @@ class XcvrStatusReactor(object):
         message_logged = False
 
         if USE_CUMULATIVE_AVERAGE:
-            rx_base_power = self.base_power_['rx']
-            rx_power = self.response[u'rxPower']
-            self.base_power_['rx'] = \
-                rx_base_power + (rx_power - rx_base_power) / self.poll_iterations_
+            if self.base_power_['rx']:
+                rx_base_power = self.base_power_['rx']
+                rx_power = self.response.get(u'rxPower', None)
+                self.base_power_['rx'] = \
+                    rx_base_power + (rx_power - rx_base_power) / self.poll_iterations_
 
-            tx_base_power = self.base_power_['tx']
-            tx_power = self.response[u'txPower']
-            self.base_power_['tx'] = \
-                tx_base_power + (tx_power - tx_base_power) / self.poll_iterations_
+            if self.base_power_['tx']:
+                tx_base_power = self.base_power_['tx']
+                tx_power = self.response[u'txPower']
+                self.base_power_['tx'] = \
+                    tx_base_power + (tx_power - tx_base_power) / self.poll_iterations_
 
         if self.base_power_['rx']:
             max_rx_power = self.base_power_['rx'] + TOLERANCE
             min_rx_power = self.base_power_['rx'] - TOLERANCE
-            rx_power = self.response[u'rxPower']
+            rx_power = self.response.get[u'rxPower']
             log('rxBase: {0}: rxPower: {1}'.format(self.base_power_['rx'],
                                                    rx_power), level='DEBUG')
             if not min_rx_power < rx_power < max_rx_power:
